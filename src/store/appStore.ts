@@ -1,6 +1,7 @@
 /** Central store: session, captured cards, stats, profile and toasts. */
 import { create } from 'zustand';
 import { api } from '../api/client';
+import { describeGoogleError, googleSignIn } from '../lib/firebaseAuth';
 import type {
   BootstrapPayload,
   PublicUser,
@@ -18,6 +19,7 @@ export const DEFAULT_STATS: Stats = {
   mine: 0,
   thisWeek: 0,
   contactable: 0,
+  meetings: 0,
   lastCaptureAt: null,
 };
 
@@ -31,6 +33,7 @@ interface AppState {
   bootstrapped: boolean;
   firstRun: { email: string; password: string } | null;
   login: (email: string, password: string) => Promise<boolean>;
+  loginWithGoogle: () => Promise<boolean>;
   logout: () => Promise<void>;
 
   ready: boolean;
@@ -81,6 +84,19 @@ export const useAppStore = create<AppState>((set, get) => ({
       return true;
     } catch (error) {
       set({ loginError: error instanceof Error ? error.message : String(error) });
+      return false;
+    }
+  },
+
+  loginWithGoogle: async () => {
+    set({ loginError: null });
+    try {
+      const { user } = await googleSignIn();
+      set({ user });
+      await get().init();
+      return true;
+    } catch (error) {
+      set({ loginError: describeGoogleError(error) });
       return false;
     }
   },

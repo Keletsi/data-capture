@@ -1,5 +1,14 @@
 /** Typed client for the Salon Cards server. All requests send cookies. */
-import type { AuthStatus, BootstrapPayload, HealthPayload, PublicUser, Salon, SalonInput, Stats } from './types';
+import type {
+  AuthStatus,
+  BootstrapPayload,
+  GoogleStatus,
+  HealthPayload,
+  PublicUser,
+  Salon,
+  SalonInput,
+  Stats,
+} from './types';
 
 const BASE = '';
 
@@ -75,6 +84,25 @@ export const api = {
 
   login: (email: string, password: string) =>
     request<LoginResult>('/api/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
+
+  firebaseWebConfig: () =>
+    request<{
+      config: {
+        projectId: string;
+        appId: string;
+        apiKey: string;
+        authDomain: string;
+        storageBucket: string;
+        messagingSenderId: string;
+      };
+      google: GoogleStatus;
+    }>('/api/firebase/web-config'),
+
+  loginWithGoogle: (idToken: string) =>
+    request<{ user: PublicUser; provisioned: boolean }>('/api/auth/google', {
+      method: 'POST',
+      body: JSON.stringify({ idToken }),
+    }),
 
   logout: () => request<{ ok: boolean }>('/api/auth/logout', { method: 'POST' }),
 

@@ -11,6 +11,16 @@ const EMPTY: SalonInput = {
   email: '',
   address: '',
   notes: '',
+  meetingAt: '',
+};
+
+const pad = (value: number) => String(value).padStart(2, '0');
+
+const toLocalInput = (iso?: string) => {
+  if (!iso) return '';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '';
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 };
 
 export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: () => void }) => {
@@ -24,6 +34,7 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
           email: salon.email,
           address: salon.address,
           notes: salon.notes || '',
+          meetingAt: toLocalInput(salon.meetingAt),
         }
       : EMPTY
   );
@@ -38,7 +49,11 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
     setError(null);
     setBusy(true);
     try {
-      const saved = salon ? await updateSalon(salon.id, form) : await createSalon(form);
+      const payload: SalonInput = {
+        ...form,
+        meetingAt: form.meetingAt ? new Date(form.meetingAt).toISOString() : '',
+      };
+      const saved = salon ? await updateSalon(salon.id, payload) : await createSalon(payload);
       if (saved) onClose();
       else setError('Could not save the card — check the details and try again.');
     } finally {
@@ -118,6 +133,17 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
               onChange={(event) => set('address')(event.target.value)}
               required
             />
+          </div>
+          <div className="span-2">
+            <label className="field-label" htmlFor="meetingAt">Meeting schedule (optional)</label>
+            <input
+              id="meetingAt"
+              className="field"
+              type="datetime-local"
+              value={form.meetingAt || ''}
+              onChange={(event) => set('meetingAt')(event.target.value)}
+            />
+            <span className="field-hint">The card and both exports will carry the date and time.</span>
           </div>
           <div className="span-2">
             <label className="field-label" htmlFor="notes">Notes (optional)</label>

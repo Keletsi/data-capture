@@ -14,10 +14,11 @@ current Sales Trail app, plus Firebase Firestore persistence for accounts and ca
 
 | Area | Detail |
 | --- | --- |
-| **Capture form** | Salon name, owner name, contact number, email, address, optional notes. Server-side validation. |
-| **Cards** | Every card shows the five fields, notes, who captured it and when. Search across all fields. |
+| **Capture form** | Salon name, owner name, contact number, email, address, **meeting schedule**, optional notes. Server-side validation. |
+| **Cards** | Every card shows the five fields, meeting date/time, notes, who captured it and when. Search across all fields. |
+| **Meeting schedule** | Optional date + time per salon, shown on the card, counted in the *Meetings booked* KPI, and included in both exports. |
 | **Send as text** | Copy one card or the filtered set as clean text blocks. Download the set as `.txt`. |
-| **Send as spreadsheet** | Download CSV (`Salon Name, Owner Name, Contact Number, Email, Address, Notes, Captured By, Captured At`) with a UTF-8 BOM for Excel. |
+| **Send as spreadsheet** | Download CSV (`Salon Name, Owner Name, Contact Number, Email, Address, Meeting, Notes, Captured By, Captured At`) with a UTF-8 BOM for Excel. |
 | **Ownership** | Cards are saved against the logged-in user. Capturers see their own cards; admins see the whole desk and can filter to *All cards* or *Mine*. |
 | **Profile** | Edit name, phone and avatar colour; change password; see capture totals, storage mode, last sync and `secrets.json` status. |
 
@@ -34,6 +35,22 @@ current Sales Trail app, plus Firebase Firestore persistence for accounts and ca
   require a session.
 
 `server/auth.mjs` is a direct adaptation of the current app's auth module.
+
+### Google sign-in
+
+The login screen has a **Continue with Google** button, using the same Firebase method as Sales Trail:
+
+1. The browser signs in with the Firebase web SDK (popup) using the public web config from
+   `GET /api/firebase/web-config`.
+2. The returned Firebase `idToken` is posted to `POST /api/auth/google`.
+3. The server verifies it with the Identity Toolkit `accounts:lookup` endpoint, finds or provisions
+   the matching app account (first sign-in creates a `rep` unless the email is the super admin), and
+   issues the usual HMAC session cookie.
+
+To enable it, turn on **Google** in Firebase console → Authentication → Sign-in method, then set
+`GOOGLE_SIGNIN_ENABLED=true` on the server to advertise the provider in
+`GET /api/auth/status` and `/api/firebase/web-config`. The button is always rendered; the note under
+it explains when the provider is not yet enabled.
 
 ---
 
@@ -75,7 +92,7 @@ Firestore, and always ensures the developer super admin
 login screen shows first-run credentials too.
 
 Environment overrides: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`,
-`PORT`, `FIREBASE_SERVICE_ACCOUNT`.
+`PORT`, `FIREBASE_SERVICE_ACCOUNT`, `GOOGLE_SIGNIN_ENABLED`, `FIREBASE_WEB_CONFIG_JSON`.
 
 ---
 
@@ -95,8 +112,8 @@ secrets/
 Firestore collections:
 
 - `users` — id, name, email, salt, passwordHash, role, phone, colour, active, timestamps.
-- `salons` — id, salonName, ownerName, contactNumber, email, address, notes, capturedById,
-  capturedBy, timestamps.
+- `salons` — id, salonName, ownerName, contactNumber, email, address, notes, meetingAt (ISO),
+  capturedById, capturedBy, timestamps.
 
 ---
 
@@ -107,6 +124,8 @@ Firestore collections:
 | GET | `/api/health` | Status, counts, secrets flags, Firebase store status |
 | GET | `/api/auth/status` | Bootstrap state + first-run credentials |
 | POST | `/api/auth/login` | Email/password sign-in; sets the session cookie |
+| POST | `/api/auth/google` | Verifies a Firebase Google `idToken`; sets the session cookie |
+| GET | `/api/firebase/web-config` | Public Firebase web config + Google provider status |
 | POST | `/api/auth/logout` | Clears the session cookie |
 | GET | `/api/auth/me` | Current session user |
 | PATCH | `/api/auth/profile` | Name, phone, avatar colour |
@@ -129,12 +148,13 @@ server/
   auth.mjs        # scrypt + HMAC sessions (copied method)
   store.mjs       # Firestore-first store with local mirror
   firebase.mjs    # service-account JWT + Firestore REST
+  firebase-web.mjs # public web config + Google idToken verification
   export.mjs      # text blocks + CSV
 src/
   api/            # types + typed client
   store/          # zustand session/cards store
   components/     # Login, TopBar, Dashboard, SalonCard, SalonForm, Profile
-  lib/            # client-side card text
+  lib/            # client-side card text + Firebase Google sign-in
 scripts/dev.mjs   # one-command dev launcher (Windows-safe)
 firestore.rules   # deny-all client rules
 firebase.json

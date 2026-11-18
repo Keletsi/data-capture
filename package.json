@@ -15,6 +15,7 @@
     "rules": "node server/deploy-rules.mjs"
   },
   "dependencies": {
+    "firebase": "^13.3.0",
     "lucide-react": "0.469.0",
     "react": "18.3.1",
     "react-dom": "18.3.1",

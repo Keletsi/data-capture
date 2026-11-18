@@ -8,12 +8,14 @@
  *   cards; admins see the whole desk. Exports respect the same visibility.
  */
 import http from 'node:http';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as auth from './auth.mjs';
 import * as store from './store.mjs';
 import { buildCsv, buildText, exportStamp } from './export.mjs';
+import { firebaseWebConfig, lookupIdToken } from './firebase-web.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
@@ -76,6 +78,13 @@ const cleanSalon = (body, existing = null) => {
   const email = text(body.email ?? existing?.email, 160).toLowerCase();
   const address = text(body.address ?? existing?.address, 260);
   const notes = text(body.notes ?? existing?.notes, 600);
+  const rawMeeting = text(body.meetingAt ?? existing?.meetingAt, 40);
+  let meetingAt = '';
+  if (rawMeeting) {
+    const when = new Date(rawMeeting);
+    if (Number.isNaN(when.getTime())) throw new Error('Add a valid meeting date and time');
+    meetingAt = when.toISOString();
+  }
 
   if (salonName.length < 2) throw new Error('Add the salon name');
   if (ownerName.length < 2) throw new Error("Add the owner's name");
@@ -83,7 +92,7 @@ const cleanSalon = (body, existing = null) => {
   if (!EMAIL_RE.test(email)) throw new Error('Add a valid email address');
   if (address.length < 5) throw new Error('Add the salon address');
 
-  return { salonName, ownerName, contactNumber, email, address, notes };
+  return { salonName, ownerName, contactNumber, email, address, notes, meetingAt };
 };
 
 const canSee = (user, salon) => auth.isAdminRole(user.role) || salon.capturedById === user.id;
@@ -118,6 +127,9 @@ const computeStats = (visibleSalons, allSalons, user) => {
     mine: mine.length,
     thisWeek: visibleSalons.filter((salon) => new Date(salon.createdAt).getTime() >= weekAgo).length,
     contactable: visibleSalons.filter((salon) => EMAIL_RE.test(salon.email || '') && salon.contactNumber).length,
+    meetings: visibleSalons.filter(
+      (salon) => salon.meetingAt && new Date(salon.meetingAt).getTime() >= Date.now()
+    ).length,
     lastCaptureAt: last ? new Date(last).toISOString() : null,
   };
 };
@@ -141,6 +153,16 @@ const noteAttempt = (ip) => {
 };
 
 let bootstrapInfo = { created: false, email: null, password: null };
+
+const googleStatus = () => ({
+  enabled: process.env.GOOGLE_SIGNIN_ENABLED === 'true',
+  provider: 'google',
+  projectId: firebaseWebConfig.projectId,
+  note:
+    process.env.GOOGLE_SIGNIN_ENABLED === 'true'
+      ? 'Google sign-in is enabled.'
+      : 'Add your Google provider in Firebase console → Authentication → Sign-in method, then set GOOGLE_SIGNIN_ENABLED=true.',
+});
 
 /* -------------------------------- static --------------------------------- */
 
@@ -219,6 +241,7 @@ const server = http.createServer(async (req, res) => {
           ? { email: bootstrapInfo.email, password: bootstrapInfo.password }
           : null,
         mode: 'local',
+        google: googleStatus(),
       });
     }
 
@@ -244,6 +267,64 @@ const server = http.createServer(async (req, res) => {
     if (pathname === '/api/auth/logout' && method === 'POST') {
       return json(res, 200, { ok: true }, {
         'set-cookie': `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`,
+      });
+    }
+
+    if (pathname === '/api/firebase/web-config') {
+      return json(res, 200, { config: firebaseWebConfig, google: googleStatus() });
+    }
+
+    if (pathname === '/api/auth/google' && method === 'POST') {
+      const ip = req.socket.remoteAddress || 'unknown';
+      if (rateLimited(ip)) return json(res, 429, { error: 'Too many attempts - try again in a few minutes' });
+      const body = await readBody(req);
+      const idToken = String(body.idToken || '').trim();
+      if (!idToken) return json(res, 400, { error: 'Missing idToken' });
+
+      let googleUser;
+      try {
+        googleUser = await lookupIdToken(idToken);
+      } catch (error) {
+        const code = error?.code || '';
+        if (code === 'INVALID_ID_TOKEN' || code === 'TOKEN_EXPIRED') {
+          return json(res, 401, { error: 'Google rejected the sign-in token - please try again' });
+        }
+        return json(res, 502, { error: `Google verification failed (${code || error.message})` });
+      }
+
+      // Find the app account for this Google email, or provision one.
+      const users = await store.all('users');
+      let user = users.find((row) => String(row.email).toLowerCase() === googleUser.email);
+      let provisioned = false;
+
+      if (!user) {
+        const role = googleUser.email === auth.SUPER_ADMIN_EMAIL ? 'superadmin' : 'rep';
+        const { salt, hash } = auth.hashPassword(crypto.randomBytes(24).toString('hex'));
+        user = await store.create('users', {
+          name: googleUser.name,
+          email: googleUser.email,
+          phone: '',
+          role,
+          salt,
+          passwordHash: hash,
+          passwordSet: false,
+          authProvider: 'google',
+          googleUid: googleUser.localId,
+          photoUrl: googleUser.photoUrl,
+          active: true,
+          color: role === 'superadmin' ? '#c8a8ff' : '#f2a8c4',
+        });
+        provisioned = true;
+      } else if (user.active === false) {
+        return json(res, 403, { error: 'This account has been deactivated - ask the desk admin to re-enable it' });
+      } else if (!user.googleUid) {
+        await store.update('users', user.id, { googleUid: googleUser.localId, authProvider: user.authProvider || 'google' });
+      }
+
+      loginAttempts.delete(ip);
+      const token = auth.issueToken(user);
+      return json(res, 200, { user: auth.publicUser(user), provisioned }, {
+        'set-cookie': `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${auth.SESSION_TTL_SEC}`,
       });
     }
 

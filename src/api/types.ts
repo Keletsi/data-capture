@@ -21,6 +21,7 @@ export interface Salon {
   email: string;
   address: string;
   notes?: string;
+  meetingAt?: string;
   capturedById: string;
   capturedBy: string;
   createdAt: string;
@@ -34,6 +35,7 @@ export interface SalonInput {
   email: string;
   address: string;
   notes?: string;
+  meetingAt?: string;
 }
 
 export interface Stats {
@@ -41,6 +43,7 @@ export interface Stats {
   mine: number;
   thisWeek: number;
   contactable: number;
+  meetings: number;
   lastCaptureAt: string | null;
 }
 
@@ -77,6 +80,14 @@ export interface AuthStatus {
   firstRun: boolean;
   firstRunCredentials: { email: string; password: string } | null;
   mode: string;
+  google?: GoogleStatus;
+}
+
+export interface GoogleStatus {
+  enabled: boolean;
+  provider: string;
+  projectId: string | null;
+  note?: string;
 }
 
 export interface BootstrapPayload {

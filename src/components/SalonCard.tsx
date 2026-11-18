@@ -1,6 +1,6 @@
-import { Mail, MapPin, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
+import { CalendarDays, Mail, MapPin, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
 import type { Salon } from '../api/types';
-import { cardText, salonInitials } from '../lib/cardText';
+import { cardText, dateTimeLabel, salonInitials } from '../lib/cardText';
 import { CopyButton, formatDay } from './ui';
 
 const mapsUrl = (address: string) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
@@ -45,6 +45,12 @@ export const SalonCard = ({
         <dt><MapPin size={13} /> Address</dt>
         <dd><a href={mapsUrl(salon.address)} target="_blank" rel="noreferrer">{salon.address}</a></dd>
       </div>
+      {salon.meetingAt ? (
+        <div className="meeting-row">
+          <dt><CalendarDays size={13} /> Meeting</dt>
+          <dd>{dateTimeLabel(salon.meetingAt)}</dd>
+        </div>
+      ) : null}
     </dl>
 
     {salon.notes ? <p className="salon-notes">{salon.notes}</p> : null}

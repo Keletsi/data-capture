@@ -94,6 +94,7 @@ export const Dashboard = ({
         <KPI label="Visible cards" value={stats.total} foot="Your access scope" tone="rose" />
         <KPI label="Captured by you" value={stats.mine} foot="On your profile" tone="gold" />
         <KPI label="Added this week" value={stats.thisWeek} foot="Last 7 days" tone="violet" />
+        <KPI label="Meetings booked" value={stats.meetings} foot="Upcoming, from the form" tone="gold" />
         <KPI label="Ready to send" value={stats.contactable} foot="Phone + email present" tone="mint" />
       </section>
 
