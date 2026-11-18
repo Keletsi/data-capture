@@ -530,7 +530,11 @@ export const handler = async (req, res) => {
     return json(res, 404, { error: 'Not found' });
   } catch (error) {
     console.error('[salon-cards]', error);
-    return json(res, error.status || 500, { error: error.message || 'Server error' });
+    return json(res, error.status || 500, {
+      error: error.message || 'Server error',
+      requestPath: pathname,
+      requestQuery: url.search,
+    });
   }
 };
 
