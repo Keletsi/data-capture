@@ -31,6 +31,10 @@ export const isSuperAdminUser = (user) =>
   isAdminRole(user?.role) && String(user?.email || '').trim().toLowerCase() === SUPER_ADMIN_EMAIL;
 
 const sessionKey = () => {
+  // Hosted deployments (Vercel) set this so every instance signs with the same
+  // key; the local app keeps using data/session.key.
+  const fromEnv = process.env.SESSION_SECRET || process.env.SESSION_KEY;
+  if (fromEnv && fromEnv.trim().length >= 32) return fromEnv.trim();
   try {
     if (fs.existsSync(KEY_FILE)) return fs.readFileSync(KEY_FILE, 'utf8').trim();
   } catch {

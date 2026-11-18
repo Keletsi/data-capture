@@ -92,7 +92,50 @@ Firestore, and always ensures the developer super admin
 login screen shows first-run credentials too.
 
 Environment overrides: `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`,
-`PORT`, `FIREBASE_SERVICE_ACCOUNT`, `GOOGLE_SIGNIN_ENABLED`, `FIREBASE_WEB_CONFIG_JSON`.
+`PORT`, `FIREBASE_SERVICE_ACCOUNT`, `FIREBASE_SERVICE_ACCOUNT_JSON`, `SESSION_SECRET`,
+`GOOGLE_SIGNIN_ENABLED`, `FIREBASE_WEB_CONFIG_JSON`, `SALON_CARDS_DATA_DIR`.
+
+---
+
+## Deploy to Vercel
+
+The repo ships `vercel.json` and `api/index.mjs`: Vercel builds the Vite app into `dist/` and runs
+the whole API as one Node function. The function does not listen on a port; it exports the same
+handler the local server uses.
+
+1. Import the GitHub repo at [vercel.com/new](https://vercel.com/new).
+2. Keep these project settings:
+   - **Root Directory**: repository root (leave empty)
+   - **Framework Preset**: Vite
+   - **Build Command**: `pnpm build`
+   - **Output Directory**: `dist`
+3. Add these **Environment Variables** (Production and Preview):
+   - `FIREBASE_SERVICE_ACCOUNT_JSON` — the full contents of `secrets/serviceAccount.json`, or its
+     base64 encoding.
+   - `SESSION_SECRET` — any random string of **32+ characters**. Every function instance signs
+     sessions with it, so logins survive cold starts and multiple instances.
+   - `GOOGLE_SIGNIN_ENABLED=true` — once Google is enabled in Firebase Authentication.
+4. Redeploy.
+
+Copy the service-account JSON from this machine (PowerShell):
+
+```powershell
+Get-Content -Raw secrets\serviceAccount.json | Set-Clipboard
+```
+
+Generate a session secret:
+
+```powershell
+node -e "console.log(require('crypto').randomBytes(48).toString('hex'))" | Set-Clipboard
+```
+
+`secrets/` and `data/` are excluded from both git and Vercel uploads, so credentials never leave
+the dashboard. On Vercel the API returns a `503` with a setup message if either variable is missing,
+which prevents the default local accounts from ever being exposed on a public URL. Firestore stays
+the source of truth; the serverless `/tmp` mirror is per-instance only.
+
+For Google sign-in, add the **bare hostname** to Firebase → Authentication → Settings →
+Authorized domains, e.g. `infocap-ten.vercel.app` (no `https://` and no trailing slash).
 
 ---
 
@@ -156,6 +199,8 @@ src/
   components/     # Login, TopBar, Dashboard, SalonCard, SalonForm, Profile
   lib/            # client-side card text + Firebase Google sign-in
 scripts/dev.mjs   # one-command dev launcher (Windows-safe)
+api/index.mjs     # Vercel serverless entry (re-exports the shared handler)
+vercel.json       # build/output + /api rewrite
 firestore.rules   # deny-all client rules
 firebase.json
 ```

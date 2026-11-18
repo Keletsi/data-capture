@@ -7,6 +7,7 @@
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -19,7 +20,11 @@ import {
 } from './firebase.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const DATA_DIR = path.join(ROOT, 'data');
+export const DATA_DIR = process.env.SALON_CARDS_DATA_DIR
+  ? path.resolve(process.env.SALON_CARDS_DATA_DIR)
+  : process.env.VERCEL
+    ? path.join(os.tmpdir(), 'salon-cards-data')
+    : path.join(ROOT, 'data');
 export const CACHE_DIR = path.join(DATA_DIR, 'cache');
 export const SECRETS_FILE = path.join(DATA_DIR, 'secrets.json');
 const MEMO_MS = 4000;

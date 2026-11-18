@@ -26,13 +26,37 @@ const SCOPES = [
   'https://www.googleapis.com/auth/cloud-platform',
 ].join(' ');
 
+const parseServiceAccount = (raw, source) => {
+  const attempts = [raw];
+  try {
+    attempts.push(Buffer.from(raw, 'base64').toString('utf8'));
+  } catch {
+    /* not base64 - only the raw JSON attempt matters */
+  }
+  for (const candidate of attempts) {
+    try {
+      const json = JSON.parse(candidate);
+      if (json.client_email && json.private_key) return { account: json, source };
+    } catch {
+      /* try the next shape */
+    }
+  }
+  return null;
+};
+
+const fromEnvironment = (() => {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_JSON || process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!raw) return null;
+  return parseServiceAccount(raw, 'env:FIREBASE_SERVICE_ACCOUNT_JSON');
+})();
+
 const loadServiceAccount = () => {
+  if (fromEnvironment) return fromEnvironment;
   for (const candidate of CANDIDATES) {
     try {
       if (!fs.existsSync(candidate)) continue;
-      const json = JSON.parse(fs.readFileSync(candidate, 'utf8'));
-      if (!json.client_email || !json.private_key) continue;
-      return { account: json, source: candidate };
+      const parsed = parseServiceAccount(fs.readFileSync(candidate, 'utf8'), candidate);
+      if (parsed) return parsed;
     } catch {
       /* try the next candidate */
     }
@@ -45,7 +69,11 @@ const { account, source } = loadServiceAccount();
 export const firebaseConfig = {
   projectId: account?.project_id || null,
   clientEmail: account?.client_email || null,
-  credentialSource: source ? path.relative(ROOT, source).replace(/\\/g, '/') : null,
+  credentialSource: source
+    ? String(source).startsWith('env:')
+      ? source
+      : path.relative(ROOT, source).replace(/\\/g, '/')
+    : null,
 };
 
 const state = {

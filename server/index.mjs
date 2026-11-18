@@ -20,6 +20,8 @@ import { firebaseWebConfig, lookupIdToken } from './firebase-web.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DIST = path.join(ROOT, 'dist');
 const STARTED = new Date();
+const IS_SERVERLESS = Boolean(process.env.VERCEL);
+const SECURE_COOKIE = IS_SERVERLESS || process.env.COOKIE_SECURE === 'true' ? ' Secure;' : '';
 
 const argPort = (() => {
   const index = process.argv.indexOf('--port');
@@ -153,6 +155,7 @@ const noteAttempt = (ip) => {
 };
 
 let bootstrapInfo = { created: false, email: null, password: null };
+let lastBootstrap = null;
 
 const googleStatus = () => ({
   enabled: process.env.GOOGLE_SIGNIN_ENABLED === 'true',
@@ -200,7 +203,45 @@ const serveStatic = (res, pathname) => {
 
 /* -------------------------------- routing -------------------------------- */
 
-const server = http.createServer(async (req, res) => {
+let readyPromise = null;
+
+/**
+ * Hydrate Firestore and bootstrap accounts once per process. On Vercel the
+ * app refuses to run without the runtime secrets so a public deployment never
+ * silently falls back to the default local accounts.
+ */
+const ensureReady = async () => {
+  if (!readyPromise) {
+    const run = (async () => {
+      if (IS_SERVERLESS) {
+        const missing = [];
+        if (!store.firebaseConfig.projectId) missing.push('FIREBASE_SERVICE_ACCOUNT_JSON');
+        if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.trim().length < 32) {
+          missing.push('SESSION_SECRET (at least 32 characters)');
+        }
+        if (missing.length) {
+          const error = new Error(
+            `This deployment is not configured yet. Add ${missing.join(' and ')} in Vercel → Settings → Environment Variables, then redeploy.`
+          );
+          error.status = 503;
+          throw error;
+        }
+      }
+      const status = await store.hydrate();
+      const info = await auth.bootstrap();
+      bootstrapInfo = { created: info.created, email: info.email, password: info.password };
+      lastBootstrap = info;
+      return status;
+    })();
+    readyPromise = run.catch((error) => {
+      readyPromise = null;
+      throw error;
+    });
+  }
+  return readyPromise;
+};
+
+export const handler = async (req, res) => {
   const url = new URL(req.url || '/', `http://localhost:${PORT}`);
   const pathname = decodeURIComponent(url.pathname);
   const method = req.method || 'GET';
@@ -216,6 +257,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    await ensureReady();
+
     /* ------------------------------- public ------------------------------ */
 
     if (pathname === '/api/health') {
@@ -260,13 +303,13 @@ const server = http.createServer(async (req, res) => {
       loginAttempts.delete(ip);
       const token = auth.issueToken(user);
       return json(res, 200, { user: auth.publicUser(user) }, {
-        'set-cookie': `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${auth.SESSION_TTL_SEC}`,
+        'set-cookie': `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/;${SECURE_COOKIE} Max-Age=${auth.SESSION_TTL_SEC}`,
       });
     }
 
     if (pathname === '/api/auth/logout' && method === 'POST') {
       return json(res, 200, { ok: true }, {
-        'set-cookie': `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0`,
+        'set-cookie': `${SESSION_COOKIE}=; HttpOnly; SameSite=Lax; Path=/;${SECURE_COOKIE} Max-Age=0`,
       });
     }
 
@@ -324,7 +367,7 @@ const server = http.createServer(async (req, res) => {
       loginAttempts.delete(ip);
       const token = auth.issueToken(user);
       return json(res, 200, { user: auth.publicUser(user), provisioned }, {
-        'set-cookie': `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${auth.SESSION_TTL_SEC}`,
+        'set-cookie': `${SESSION_COOKIE}=${encodeURIComponent(token)}; HttpOnly; SameSite=Lax; Path=/;${SECURE_COOKIE} Max-Age=${auth.SESSION_TTL_SEC}`,
       });
     }
 
@@ -487,23 +530,24 @@ const server = http.createServer(async (req, res) => {
     return json(res, 404, { error: 'Not found' });
   } catch (error) {
     console.error('[salon-cards]', error);
-    return json(res, 500, { error: error.message || 'Server error' });
+    return json(res, error.status || 500, { error: error.message || 'Server error' });
   }
-});
+};
+
+const server = http.createServer(handler);
 
 /* --------------------------------- start --------------------------------- */
 
 const start = async () => {
   // Firestore is the source of truth; hydrate the local mirror before the
   // bootstrap check so existing accounts/cards are recognised immediately.
-  const status = await store.hydrate();
-  const info = await auth.bootstrap();
-  bootstrapInfo = { created: info.created, email: info.email, password: info.password };
+  const status = await ensureReady();
 
   console.log('\n  Salon Cards');
   console.log('  -----------');
   console.log(`  Store mode: ${status.mode}${status.firebase.projectId ? ` (Firebase ${status.firebase.projectId})` : ''}`);
   if (status.lastError) console.log(`  Firebase note: ${status.lastError}`);
+  const info = lastBootstrap || {};
   if (info.created) {
     console.log(`  First-run admin: ${info.email} / ${info.password}`);
   }
@@ -518,4 +562,14 @@ const start = async () => {
   });
 };
 
-void start();
+const isCli = (() => {
+  const entry = process.argv[1];
+  if (!entry) return false;
+  try {
+    return path.resolve(entry) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+})();
+
+if (isCli) void start();
