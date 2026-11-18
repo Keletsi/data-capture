@@ -73,12 +73,34 @@ const readBody = (req, limit = 1024 * 1024) =>
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * Interest is a simple two-state flag on the card. Accept the handful of ways
+ * it can arrive (select value, yes/no, free text) and store one label.
+ */
+const INTEREST_LABELS = {
+  interested: 'Interested',
+  yes: 'Interested',
+  true: 'Interested',
+  'not interested': 'Not interested',
+  'not-interested': 'Not interested',
+  notinterested: 'Not interested',
+  no: 'Not interested',
+  false: 'Not interested',
+};
+
+const cleanInterest = (value) => {
+  const raw = text(value, 40);
+  if (!raw) return '';
+  return INTEREST_LABELS[raw.toLowerCase()] || raw;
+};
+
 const cleanSalon = (body, existing = null) => {
   const salonName = text(body.salonName ?? existing?.salonName, 120);
   const ownerName = text(body.ownerName ?? existing?.ownerName, 120);
   const contactNumber = text(body.contactNumber ?? existing?.contactNumber, 40);
   const email = text(body.email ?? existing?.email, 160).toLowerCase();
   const address = text(body.address ?? existing?.address, 260);
+  const interest = cleanInterest(body.interest ?? existing?.interest);
   const notes = text(body.notes ?? existing?.notes, 600);
   const rawMeeting = text(body.meetingAt ?? existing?.meetingAt, 40);
   let meetingAt = '';
@@ -88,13 +110,12 @@ const cleanSalon = (body, existing = null) => {
     meetingAt = when.toISOString();
   }
 
+  // Only the salon name is mandatory. Reps often capture a name and number on
+  // the spot, so blank fields are stored and exported as empty cells.
   if (salonName.length < 2) throw new Error('Add the salon name');
-  if (ownerName.length < 2) throw new Error("Add the owner's name");
-  if (contactNumber.replace(/\D/g, '').length < 9) throw new Error('Add a valid contact number');
-  if (!EMAIL_RE.test(email)) throw new Error('Add a valid email address');
-  if (address.length < 5) throw new Error('Add the salon address');
+  if (email && !EMAIL_RE.test(email)) throw new Error('Add a valid email address');
 
-  return { salonName, ownerName, contactNumber, email, address, notes, meetingAt };
+  return { salonName, ownerName, contactNumber, email, address, interest, notes, meetingAt };
 };
 
 const canSee = (user, salon) => auth.isAdminRole(user.role) || salon.capturedById === user.id;
@@ -103,7 +124,7 @@ const visible = (user, salons) => salons.filter((salon) => canSee(user, salon));
 
 const matchesQuery = (salon, query) => {
   if (!query) return true;
-  const haystack = [salon.salonName, salon.ownerName, salon.contactNumber, salon.email, salon.address, salon.notes, salon.capturedBy]
+  const haystack = [salon.salonName, salon.ownerName, salon.contactNumber, salon.email, salon.address, salon.interest, salon.notes, salon.capturedBy]
     .join(' ')
     .toLowerCase();
   return haystack.includes(query.toLowerCase());

@@ -250,6 +250,8 @@ body {
 .salon-details a:hover { color: var(--accent); border-color: var(--accent); }
 .salon-notes { margin: 0; font-size: 11px; line-height: 1.55; color: var(--muted); background: var(--panel-softer); border-left: 2px solid rgba(240, 166, 195, 0.45); padding: 7px 10px; border-radius: 0 8px 8px 0; }
 .salon-details .meeting-row dd { color: var(--gold); }
+.salon-details .interest-row dd { color: var(--text); }
+.salon-details .interest-row .chip { font-size: 9px; padding: 2px 8px; }
 .salon-foot { display: flex; justify-content: space-between; align-items: center; gap: 8px; border-top: 1px solid var(--line); padding-top: 11px; margin-top: auto; }
 .salon-foot .faint { font-size: 9.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

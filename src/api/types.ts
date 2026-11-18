@@ -20,6 +20,7 @@ export interface Salon {
   contactNumber: string;
   email: string;
   address: string;
+  interest?: string;
   notes?: string;
   meetingAt?: string;
   capturedById: string;
@@ -34,6 +35,7 @@ export interface SalonInput {
   contactNumber: string;
   email: string;
   address: string;
+  interest?: string;
   notes?: string;
   meetingAt?: string;
 }

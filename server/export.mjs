@@ -21,6 +21,7 @@ export const CARD_HEADER = [
   'Contact Number',
   'Email',
   'Address',
+  'Interest',
   'Meeting',
   'Notes',
   'Captured By',
@@ -29,13 +30,12 @@ export const CARD_HEADER = [
 
 /** A single salon as a plain-text block, ready to paste into WhatsApp/email. */
 export const cardText = (salon) => {
-  const lines = [
-    salon.salonName,
-    `Owner: ${salon.ownerName}`,
-    `Contact: ${salon.contactNumber}`,
-    `Email: ${salon.email}`,
-    `Address: ${salon.address}`,
-  ];
+  const lines = [salon.salonName || 'Untitled salon'];
+  if (salon.ownerName) lines.push(`Owner: ${salon.ownerName}`);
+  if (salon.contactNumber) lines.push(`Contact: ${salon.contactNumber}`);
+  if (salon.email) lines.push(`Email: ${salon.email}`);
+  if (salon.address) lines.push(`Address: ${salon.address}`);
+  if (salon.interest) lines.push(`Interest: ${salon.interest}`);
   if (salon.meetingAt) lines.push(`Meeting: ${dateTimeLabel(salon.meetingAt)}`);
   if (salon.notes) lines.push(`Notes: ${salon.notes}`);
   lines.push(`Captured by: ${salon.capturedBy || 'Unknown'} on ${isoDay(salon.createdAt)}`);
@@ -56,6 +56,7 @@ export const buildCsv = (salons) => {
         salon.contactNumber,
         salon.email,
         salon.address,
+        salon.interest || '',
         dateTimeLabel(salon.meetingAt),
         salon.notes || '',
         salon.capturedBy || '',

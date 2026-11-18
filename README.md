@@ -1,7 +1,8 @@
 # Salon Cards
 
 An authenticated salon capture desk. Log a salon's **name**, **owner**, **contact number**,
-**email** and **address** once; each entry becomes a card saved to the signed-in user's profile.
+**email**, **address** and whether they are **interested**, and each entry becomes a card saved to the
+signed-in user's profile. Only the salon name is required, so partly-filled cards still work.
 Copy a card as text, copy the whole set, or download a spreadsheet (CSV) that opens in Excel or
 Google Sheets.
 
@@ -14,11 +15,11 @@ current Sales Trail app, plus Firebase Firestore persistence for accounts and ca
 
 | Area | Detail |
 | --- | --- |
-| **Capture form** | Salon name, owner name, contact number, email, address, **meeting schedule**, optional notes. Server-side validation. |
-| **Cards** | Every card shows the five fields, meeting date/time, notes, who captured it and when. Search across all fields. |
+| **Capture form** | Salon name, owner name, contact number, email, address, **interest** (interested / not interested), **meeting schedule**, notes. Only the salon name is required — blank fields stay blank on the card and in the exports. |
+| **Cards** | Every card shows the details that were captured ("Not given" for blanks), the interest chip, meeting date/time, notes, who captured it and when. Search across all fields. |
 | **Meeting schedule** | Optional date + time per salon, shown on the card, counted in the *Meetings booked* KPI, and included in both exports. |
 | **Send as text** | Copy one card or the filtered set as clean text blocks. Download the set as `.txt`. |
-| **Send as spreadsheet** | Download CSV (`Salon Name, Owner Name, Contact Number, Email, Address, Meeting, Notes, Captured By, Captured At`) with a UTF-8 BOM for Excel. |
+| **Send as spreadsheet** | Download CSV (`Salon Name, Owner Name, Contact Number, Email, Address, Interest, Meeting, Notes, Captured By, Captured At`) with a UTF-8 BOM for Excel. |
 | **Ownership** | Cards are saved against the logged-in user. Capturers see their own cards; admins see the whole desk and can filter to *All cards* or *Mine*. |
 | **Profile** | Edit name, phone and avatar colour; change password; see capture totals, storage mode, last sync and `secrets.json` status. |
 
@@ -155,7 +156,7 @@ secrets/
 Firestore collections:
 
 - `users` — id, name, email, salt, passwordHash, role, phone, colour, active, timestamps.
-- `salons` — id, salonName, ownerName, contactNumber, email, address, notes, meetingAt (ISO),
+- `salons` — id, salonName, ownerName, contactNumber, email, address, interest, notes, meetingAt (ISO),
   capturedById, capturedBy, timestamps.
 
 ---

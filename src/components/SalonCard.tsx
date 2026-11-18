@@ -1,4 +1,4 @@
-import { CalendarDays, Mail, MapPin, Pencil, Phone, Trash2, UserRound } from 'lucide-react';
+import { CalendarDays, Mail, MapPin, Pencil, Phone, Sparkles, Trash2, UserRound } from 'lucide-react';
 import type { Salon } from '../api/types';
 import { cardText, dateTimeLabel, salonInitials } from '../lib/cardText';
 import { CopyButton, formatDay } from './ui';
@@ -31,20 +31,42 @@ export const SalonCard = ({
     <dl className="salon-details">
       <div>
         <dt><UserRound size={13} /> Owner</dt>
-        <dd>{salon.ownerName}</dd>
+        <dd>{salon.ownerName || <span className="faint">Not given</span>}</dd>
       </div>
       <div>
         <dt><Phone size={13} /> Contact</dt>
-        <dd><a href={`tel:${salon.contactNumber.replace(/\s+/g, '')}`}>{salon.contactNumber}</a></dd>
+        <dd>
+          {salon.contactNumber ? (
+            <a href={`tel:${salon.contactNumber.replace(/\s+/g, '')}`}>{salon.contactNumber}</a>
+          ) : (
+            <span className="faint">Not given</span>
+          )}
+        </dd>
       </div>
       <div>
         <dt><Mail size={13} /> Email</dt>
-        <dd><a href={`mailto:${salon.email}`}>{salon.email}</a></dd>
+        <dd>
+          {salon.email ? <a href={`mailto:${salon.email}`}>{salon.email}</a> : <span className="faint">Not given</span>}
+        </dd>
       </div>
       <div>
         <dt><MapPin size={13} /> Address</dt>
-        <dd><a href={mapsUrl(salon.address)} target="_blank" rel="noreferrer">{salon.address}</a></dd>
+        <dd>
+          {salon.address ? (
+            <a href={mapsUrl(salon.address)} target="_blank" rel="noreferrer">{salon.address}</a>
+          ) : (
+            <span className="faint">Not given</span>
+          )}
+        </dd>
       </div>
+      {salon.interest ? (
+        <div className="interest-row">
+          <dt><Sparkles size={13} /> Interest</dt>
+          <dd>
+            <span className={`chip ${salon.interest === 'Not interested' ? 'red' : 'green'}`}>{salon.interest}</span>
+          </dd>
+        </div>
+      ) : null}
       {salon.meetingAt ? (
         <div className="meeting-row">
           <dt><CalendarDays size={13} /> Meeting</dt>

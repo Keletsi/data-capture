@@ -34,7 +34,7 @@ export const Dashboard = ({
       .filter((salon) => (scope === 'mine' ? salon.capturedById === user?.id : true))
       .filter((salon) => {
         if (!needle) return true;
-        return [salon.salonName, salon.ownerName, salon.contactNumber, salon.email, salon.address, salon.notes, salon.capturedBy]
+        return [salon.salonName, salon.ownerName, salon.contactNumber, salon.email, salon.address, salon.interest, salon.notes, salon.capturedBy]
           .join(' ')
           .toLowerCase()
           .includes(needle);
@@ -70,8 +70,8 @@ export const Dashboard = ({
           <span className="eyebrow"><Sparkles size={12} /> Capture desk</span>
           <h1>Salons worth a follow-up.</h1>
           <p>
-            Capture the five essentials once. Each salon becomes a card saved to your profile, ready to hand over as
-            text or a spreadsheet.
+            Capture a salon once, note whether they are interested, and each card saves to your profile — ready to
+            hand over as text or a spreadsheet.
           </p>
           <div className="row wrap" style={{ gap: 8 }}>
             <button className="btn" onClick={onNew}><Plus size={14} /> Capture a salon</button>
@@ -147,7 +147,7 @@ export const Dashboard = ({
         <div className="card">
           <EmptyState
             title={salons.length ? 'No cards match that search' : 'No salons captured yet'}
-            hint={salons.length ? 'Try a different name, owner, number or address.' : 'Capture the salon name, owner, contact number, email and address to create your first card.'}
+            hint={salons.length ? 'Try a different name, owner, number or address.' : 'Add a salon name to create your first card — every other field can stay blank.'}
             icon={<Plus size={22} style={{ color: 'var(--accent)', marginBottom: 8 }} />}
           />
         </div>

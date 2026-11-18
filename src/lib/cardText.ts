@@ -16,13 +16,12 @@ export const dateTimeLabel = (value?: string | null) => {
 
 /** The same text block the server exports, so per-card copy is instant. */
 export const cardText = (salon: Salon) => {
-  const lines = [
-    salon.salonName,
-    `Owner: ${salon.ownerName}`,
-    `Contact: ${salon.contactNumber}`,
-    `Email: ${salon.email}`,
-    `Address: ${salon.address}`,
-  ];
+  const lines = [salon.salonName || 'Untitled salon'];
+  if (salon.ownerName) lines.push(`Owner: ${salon.ownerName}`);
+  if (salon.contactNumber) lines.push(`Contact: ${salon.contactNumber}`);
+  if (salon.email) lines.push(`Email: ${salon.email}`);
+  if (salon.address) lines.push(`Address: ${salon.address}`);
+  if (salon.interest) lines.push(`Interest: ${salon.interest}`);
   if (salon.meetingAt) lines.push(`Meeting: ${dateTimeLabel(salon.meetingAt)}`);
   if (salon.notes) lines.push(`Notes: ${salon.notes}`);
   lines.push(`Captured by: ${salon.capturedBy || 'Unknown'} on ${isoDay(salon.createdAt)}`);

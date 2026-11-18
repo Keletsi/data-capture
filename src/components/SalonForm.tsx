@@ -10,6 +10,7 @@ const EMPTY: SalonInput = {
   contactNumber: '',
   email: '',
   address: '',
+  interest: '',
   notes: '',
   meetingAt: '',
 };
@@ -33,6 +34,7 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
           contactNumber: salon.contactNumber,
           email: salon.email,
           address: salon.address,
+          interest: salon.interest || '',
           notes: salon.notes || '',
           meetingAt: toLocalInput(salon.meetingAt),
         }
@@ -65,7 +67,8 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
     <Modal title={salon ? `Edit ${salon.salonName}` : 'Capture a salon'} onClose={onClose}>
       <form onSubmit={submit}>
         <p className="modal-hint">
-          Five essentials. They become the card you copy as text or export as a spreadsheet.
+          Only the salon name is needed. Fill in whatever the owner shares — empty fields simply stay blank on the
+          card and in the spreadsheet.
         </p>
 
         {error ? (
@@ -96,7 +99,6 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
               placeholder="Nomsa Dlamini"
               value={form.ownerName}
               onChange={(event) => set('ownerName')(event.target.value)}
-              required
             />
           </div>
           <div>
@@ -108,7 +110,6 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
               placeholder="082 555 0182"
               value={form.contactNumber}
               onChange={(event) => set('contactNumber')(event.target.value)}
-              required
             />
           </div>
           <div>
@@ -120,7 +121,6 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
               placeholder="owner@salon.co.za"
               value={form.email}
               onChange={(event) => set('email')(event.target.value)}
-              required
             />
           </div>
           <div className="span-2">
@@ -131,11 +131,23 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
               placeholder="14 Jacaranda Street, Brackenfell, Cape Town"
               value={form.address}
               onChange={(event) => set('address')(event.target.value)}
-              required
             />
           </div>
-          <div className="span-2">
-            <label className="field-label" htmlFor="meetingAt">Meeting schedule (optional)</label>
+          <div>
+            <label className="field-label" htmlFor="interest">Interest</label>
+            <select
+              id="interest"
+              className="field"
+              value={form.interest || ''}
+              onChange={(event) => set('interest')(event.target.value)}
+            >
+              <option value="">Not captured</option>
+              <option value="Interested">Interested</option>
+              <option value="Not interested">Not interested</option>
+            </select>
+          </div>
+          <div>
+            <label className="field-label" htmlFor="meetingAt">Meeting schedule</label>
             <input
               id="meetingAt"
               className="field"
@@ -143,10 +155,10 @@ export const SalonForm = ({ salon, onClose }: { salon: Salon | null; onClose: ()
               value={form.meetingAt || ''}
               onChange={(event) => set('meetingAt')(event.target.value)}
             />
-            <span className="field-hint">The card and both exports will carry the date and time.</span>
+            <span className="field-hint">Date and time carry through to the card and exports.</span>
           </div>
           <div className="span-2">
-            <label className="field-label" htmlFor="notes">Notes (optional)</label>
+            <label className="field-label" htmlFor="notes">Notes</label>
             <textarea
               id="notes"
               className="field"
