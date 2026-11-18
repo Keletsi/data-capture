@@ -1,0 +1,31 @@
+{
+  "name": "salon-cards",
+  "version": "1.0.0",
+  "description": "Salon Cards - authenticated salon capture desk. Log salon name, owner, contact number, email and address, keep them as cards, then send them as text or a spreadsheet.",
+  "license": "MIT",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node scripts/dev.mjs",
+    "dev:server": "node server/index.mjs --port 5194",
+    "dev:web": "vite --port 5195 --strictPort",
+    "build": "tsc -p tsconfig.json && vite build",
+    "start": "node server/index.mjs",
+    "type": "tsc -p tsconfig.json --noEmit",
+    "rules": "node server/deploy-rules.mjs"
+  },
+  "dependencies": {
+    "lucide-react": "0.469.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "zustand": "4.4.7"
+  },
+  "devDependencies": {
+    "@types/react": "~18.3.1",
+    "@types/react-dom": "~18.3.0",
+    "@vitejs/plugin-react": "4.3.4",
+    "typescript": "5.6.3",
+    "vite": "6.0.7"
+  },
+  "packageManager": "pnpm@9.15.3"
+}

@@ -1,0 +1,26 @@
+rules_version = '2';
+
+/**
+ * Salon Cards - Firestore security rules.
+ *
+ * The Node server writes through the Firebase Admin REST API with the service
+ * account in secrets/serviceAccount.json, which bypasses these rules. They
+ * exist to make sure nothing else can read or write the data from a browser.
+ *
+ * Default posture: deny everything.
+ */
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /salons/{salonId} {
+      allow read, write: if false;
+    }
+
+    match /users/{userId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
