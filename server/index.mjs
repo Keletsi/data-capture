@@ -224,13 +224,6 @@ const ensureReady = async () => {
             `This deployment is not configured yet. Add ${missing.join(' and ')} in Vercel → Settings → Environment Variables, then redeploy.`
           );
           error.status = 503;
-          error.details = {
-            firebaseConfigured: Boolean(store.firebaseConfig.projectId),
-            hasFirebaseServiceAccountJson: Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_JSON),
-            hasSessionSecret: Boolean(process.env.SESSION_SECRET),
-            sessionSecretLength: (process.env.SESSION_SECRET || '').trim().length,
-            environment: process.env.VERCEL_ENV || 'unknown',
-          };
           throw error;
         }
       }
@@ -537,10 +530,7 @@ export const handler = async (req, res) => {
     return json(res, 404, { error: 'Not found' });
   } catch (error) {
     console.error('[salon-cards]', error);
-    return json(res, error.status || 500, {
-      error: error.message || 'Server error',
-      ...(error.details ? { details: error.details } : {}),
-    });
+    return json(res, error.status || 500, { error: error.message || 'Server error' });
   }
 };
 
